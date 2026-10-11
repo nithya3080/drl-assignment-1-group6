@@ -3,7 +3,7 @@
 Experiments for the paper analysed in this assignment:
 
 > Wolf, E. (2025). *A Framework for Fair Evaluation of Variance-Aware Bandit Algorithms.* arXiv:2510.27001.
-> Authors' framework (Bandit Playground): https://github.com/eelisee/bandit_playground
+> Authors' paper-linked framework version (Bandit Playground): https://github.com/eelisee/bandit_playground/tree/ab0e657070c41089ed37d9795f297d067bd84903
 
 BITS Pilani WILP, M.Tech AI/ML, Deep Reinforcement Learning, Assignment I, Group 6.
 
@@ -17,18 +17,23 @@ BITS Pilani WILP, M.Tech AI/ML, Deep Reinforcement Learning, Assignment I, Group
 ## What this repository contains
 
 The paper compares eight bandit algorithms on three two-armed Bernoulli scenarios. This
-repository simulates ETC, UCB and UCB-Tuned under the paper's protocol (horizon T = 1,000,000
-steps, 100 independent trials, ETC exploration lengths m = 10 to 100,000) and places the
+repository partially reproduces ETC, UCB and UCB-Tuned using the paper's scenarios, horizon T = 1,000,000
+steps, 100 independent trials and ETC exploration lengths m = 10 to 100,000, and places the
 resulting regret next to the values printed in the paper's Tables 3 to 5. ETC is simulated in
 two forms, described below, because the paper's text and the Bandit Playground code describe
 slightly different procedures.
+
+This is a partial reproduction of three algorithms and selected regret metrics. Our arm order
+is randomized per trial, rather than exhaustively evaluated for each permutation. Random
+streams and checkpoints differ; reward distributions, VaR and reward-variance tests are not
+reproduced. The paper contributes an evaluation framework for existing algorithms.
 
 | File | Purpose |
 |---|---|
 | `bandit_sim.py` | Simulation of ETC, ETC-greedy, UCB and UCB-Tuned (all trials run together as NumPy arrays) |
 | `run_experiment.py` | Runs scenarios A, B, C and writes the tables in `results/` |
 | `make_plots.py` | Draws `results/regret_curves.png` and `results/final_regret_vs_paper.png` |
-| `verify_implementation.py` | Checks the simulation against closed-form theory and a plain-loop reference |
+| `verify_implementation.py` | Checks the simulation against a normal approximation and independent plain-loop references |
 | `results/` | `summary.csv`, `comparison.csv`, `etc_expected.csv`, `raw_results.json`, figures |
 
 ## Setup and run
@@ -36,12 +41,26 @@ slightly different procedures.
 ```bash
 pip install -r requirements.txt        # numpy, matplotlib
 python3 verify_implementation.py       # about a minute, prints PASS/FAIL per check
-python3 run_experiment.py              # full protocol, about 8 minutes on 2 cores
-python3 run_experiment.py --quick      # T = 100,000 and 20 trials, about 30 seconds
+python3 run_experiment.py              # full horizon for our selected methods; writes results/
+python3 run_experiment.py --quick      # T = 100,000, 20 trials; writes results_quick/
 python3 make_plots.py                  # figures from results/
 ```
 
-Random seeds are fixed (`SEED = 42`), so repeated runs give identical numbers.
+On Windows, use `python` if `python3` is not available. Quick runs use a shorter horizon;
+their paper-reference columns are not like-for-like final comparisons. Use the preserved
+full-horizon `results/` for presentation numbers. To plot quick outputs, pass their directory
+explicitly: `python3 make_plots.py results_quick`.
+
+Random seeds are fixed (`SEED = 42`); repeatability also depends on code and library versions.
+The committed results come from a full run on 11 October 2026 with Python 3.14.5 and
+NumPy 2.4.6. All 36 main summary rows, 20 paper-comparison rows and 36 mean regret curves
+matched the previously saved results exactly. The verifier passed all 26 checks.
+
+Five auxiliary strict-ETC Monte Carlo estimates differed slightly from the historical
+output, within the reported sampling uncertainty. The original producing environment was
+not recorded, so the cause of those differences is unestablished. The tables below use
+the fresh committed estimates. `results/raw_results.json` records the generation time,
+seeds, Python/NumPy versions, implementation version, source hashes and reproduction scope.
 
 ## Setting
 
@@ -77,7 +96,8 @@ favour neither arm.
 | C | UCB-Tuned | 226.09 | 227.82 ± 8.94 | 1.01 |
 
 All six values are within 6% of the paper. UCB-Tuned has the lowest regret of the two in every
-scenario, and the difference to UCB is largest in the two micro-gap scenarios B and C.
+scenario. The absolute regret savings against UCB are largest in the two micro-gap
+scenarios B and C; the largest relative reduction occurs in A.
 
 ![final regret vs paper](results/final_regret_vs_paper.png)
 
@@ -111,13 +131,13 @@ so the expected values from 100,000 trials are listed next to it.
 | A | 100,000 | 10,000.0 | 0 / 100 | 10,000.0 ± 0.0 | 0.0% |
 | B | 10 | 2,600.0 | 52 / 100 | 2,428.3 ± 7.9 | 48.6% |
 | B | 100 | 2,200.1 | 44 / 100 | 2,258.6 ± 7.9 | 45.2% |
-| B | 1,000 | 1,851.3 | 37 / 100 | 1,781.5 ± 7.6 | 35.6% |
-| B | 10,000 | 638.0 | 12 / 100 | 655.1 ± 5.1 | 12.3% |
-| B | 100,000 | 500.0 | 0 / 100 | 500.4 ± 0.1 | 0.0% |
+| B | 1,000 | 1,851.3 | 37 / 100 | 1,785.5 ± 7.6 | 35.7% |
+| B | 10,000 | 638.0 | 12 / 100 | 654.6 ± 5.1 | 12.3% |
+| B | 100,000 | 500.0 | 0 / 100 | 500.2 ± 0.1 | 0.0% |
 | C | 10 | 2,650.0 | 53 / 100 | 2,428.5 ± 7.9 | 48.6% |
 | C | 100 | 2,250.1 | 45 / 100 | 2,294.0 ± 7.9 | 45.9% |
-| C | 1,000 | 1,751.5 | 35 / 100 | 1,796.3 ± 7.6 | 35.9% |
-| C | 10,000 | 491.0 | 9 / 100 | 675.8 ± 5.2 | 12.8% |
+| C | 1,000 | 1,751.5 | 35 / 100 | 1,796.9 ± 7.6 | 35.9% |
+| C | 10,000 | 491.0 | 9 / 100 | 676.3 ± 5.2 | 12.8% |
 | C | 100,000 | 500.0 | 0 / 100 | 500.2 ± 0.1 | 0.0% |
 
 **ETC-greedy.** Because the estimates keep updating after exploration, a wrong early ranking
@@ -130,10 +150,10 @@ regret from 1,000 trials, at the three settings the paper highlights:
 | Scenario | m | Mean regret, 100 trials (± s.e.) | Expected regret, 1,000 trials (± s.e.) | Expected regret of ETC, 100,000 trials |
 |---|---|---|---|---|
 | A | 100 | 10.0 ± 0.0 | 110.2 ± 100.0 | 2,184.6 |
-| B | 10,000 | 189.8 ± 74.3 | 256.1 ± 29.7 | 655.1 |
-| C | 10,000 | 350.8 ± 116.8 | 197.5 ± 24.5 | 675.8 |
+| B | 10,000 | 189.8 ± 74.3 | 256.1 ± 29.7 | 654.6 |
+| C | 10,000 | 350.8 ± 116.8 | 197.5 ± 24.5 | 676.3 |
 
-For comparison, UCB-Tuned and UCB over the same 100 trials:
+For comparison, UCB-Tuned and UCB with 100 independent trials per algorithm:
 
 | Scenario | UCB (± s.e.) | UCB-Tuned (± s.e.) |
 |---|---|---|
@@ -163,12 +183,14 @@ ETC values printed in the paper, next to this run (100 trials):
 The ETC-greedy values are close to the paper's ETC entries (A, m = 100: 10.01 against 10.10).
 For m = 10,000 in B and C the 100-trial means carry a standard error of about 75 to 120
 because a few trials spend a long stretch on the worse arm, so the paper's 150.66 and 170.53
-lie within sampling noise of the ETC-greedy results. ETC with a fixed commitment has a
-higher expected regret at the same settings.
+are compatible with substantial sampling variation. This does not establish equal expected
+performance. The larger-trial values in `etc_expected.csv` are Monte Carlo estimates, not
+exact expectations. ETC with a fixed commitment has higher expected regret at the same
+paper-highlighted settings; this does not establish a universal winner.
 
 ## Verification
 
-`verify_implementation.py` runs four groups of checks:
+`verify_implementation.py` runs 26 checks covering:
 
 1. ETC: the simulated share of trials that commit to the worse arm matches the normal
    approximation above for A (m = 100), B (m = 10,000), C (m = 10,000) and C (m = 100,000).
@@ -176,6 +198,21 @@ higher expected regret at the same settings.
    independent single-trial implementation written with plain Python loops.
 3. ETC-greedy: the same comparison against a plain-loop single-trial implementation.
 4. Regret is non-decreasing in t and never exceeds Delta * t, for every algorithm.
+5. Truncated and odd exploration horizons have the correct alternating pull counts, obey
+   regret = gap * horizon * suboptimal ratio, and have no commitment before exploitation.
+6. The quick-mode m = 100,000, T = 100,000 case has regret 250 and suboptimal ratio 0.5
+   for the micro-gap scenario. A failed check exits with status 1.
+
+The ETC probability check uses a normal approximation with an approximation allowance;
+it is not an exact binomial calculation. The independent plain-loop comparisons use
+separate random streams and check agreement within sampling error, rather than identical
+trial paths. Run `python verify_implementation.py` to inspect all 26 checks; a failed
+check exits with status 1.
+
+The fresh full run uses the scenario-specific and algorithm-specific seed schema documented
+in `results/raw_results.json`. ETC expectation values are larger-trial Monte Carlo estimates
+with standard errors; they should not be interpreted as exact expectations. The reported
+paper comparisons cover only the algorithms and regret metrics reproduced here.
 
 ## File reference
 

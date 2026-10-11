@@ -8,6 +8,8 @@ Checks that bandit_sim.py behaves as the algorithm definitions say.
    separate, plain-Python single-trial implementation written directly from the
    definitions.
 3. Regret bookkeeping: regret is non-decreasing in t and bounded by gap * t.
+4. ETC exploration ends at the horizon, including odd horizons, and final regret
+   equals gap * horizon * suboptimal-pull ratio.
 
 Run:  python3 verify_implementation.py
 """
@@ -140,5 +142,37 @@ for name, (out, *_rest) in {
     bounded = bool(np.all(out <= 0.1 * marks[:, None] + 1e-9))
     report(f"regret bookkeeping, {name}", monotone and bounded, "non-decreasing in t and at most gap * t")
 
+# ----------------------------------------- 4. exploration cutoffs and odd horizons
+# Both arm orders make an omitted final arm-0 pull observable. These expectations
+# follow directly from one alternating action per round, independent of rewards.
+boundary_means = np.array([[0.80, 0.90], [0.90, 0.80]])
+boundary_gap = boundary_means.max(axis=1)[:, None] - boundary_means
+for name, simulate in (("ETC", sim.simulate_etc), ("ETC-greedy", sim.simulate_etc_greedy)):
+    for horizon in (3, 4, 5, 6, 7):
+        m = 3
+        boundary_marks = np.arange(1, horizon + 1)
+        out, ratio, flagged = simulate(boundary_means, m, horizon, boundary_marks, np.random.default_rng(12))
+        implied_regret = boundary_gap.max(axis=1) * horizon * ratio
+        ratio_matches = bool(np.allclose(out[-1], implied_regret, atol=1e-12, rtol=0))
+        exploration_marks = boundary_marks[boundary_marks <= 2 * m]
+        expected_exploration = (((exploration_marks + 1) // 2)[:, None] * boundary_gap[:, 0]
+                                + (exploration_marks // 2)[:, None] * boundary_gap[:, 1])
+        exploration_matches = bool(np.allclose(out[:len(exploration_marks)], expected_exploration,
+                                              atol=1e-12, rtol=0))
+        no_commit_before_exploitation = horizon > 2 * m or not bool(np.any(flagged))
+        report(f"exploration cutoff, {name}, m={m}, T={horizon}",
+               ratio_matches and exploration_matches and no_commit_before_exploitation,
+               "alternating pulls through cutoff; regret = gap * T * suboptimal ratio")
+
+# The documented quick mode has m=100,000 at T=100,000: exactly half the pulls
+# are suboptimal, with no post-exploration action and regret 250 for gap 0.005.
+quick_means = np.array([[0.89, 0.895], [0.895, 0.89]])
+for name, simulate in (("ETC", sim.simulate_etc), ("ETC-greedy", sim.simulate_etc_greedy)):
+    out, ratio, flagged = simulate(quick_means, 100_000, 100_000, np.array([100_000]),
+                                  np.random.default_rng(13))
+    ok = bool(np.allclose(out[-1], 250.0) and np.allclose(ratio, 0.5) and not np.any(flagged))
+    report(f"quick-mode exploration cutoff, {name}", ok, "regret 250; suboptimal ratio 0.5; no commitment")
+
 print()
 print("ALL CHECKS PASSED" if all(results) else "SOME CHECKS FAILED")
+raise SystemExit(0 if all(results) else 1)

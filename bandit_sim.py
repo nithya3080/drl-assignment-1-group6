@@ -67,9 +67,9 @@ def simulate_etc(means, m, horizon, marks, rng):
         else:
             regret[i] = m * (gap[:, 0] + gap[:, 1]) + (t - 2 * m) * committed_gap
     explore_pulls = min(2 * m, horizon)
-    subopt_pulls = (explore_pulls // 2) * (gap[:, 0] > 0) + (explore_pulls // 2) * (gap[:, 1] > 0)
+    subopt_pulls = ((explore_pulls + 1) // 2) * (gap[:, 0] > 0) + (explore_pulls // 2) * (gap[:, 1] > 0)
     subopt_pulls = subopt_pulls + max(horizon - 2 * m, 0) * (committed_gap > 0)
-    return regret, subopt_pulls / horizon, committed_gap > 0
+    return regret, subopt_pulls / horizon, (committed_gap > 0) & (horizon > 2 * m)
 
 
 def simulate_ucb(means, horizon, marks, rng, tuned=False):
@@ -140,6 +140,14 @@ def simulate_etc_greedy(means, m, horizon, marks, rng):
     n = means.shape[0]
     rows = np.arange(n)
     gap = means.max(axis=1)[:, None] - means
+    if horizon < 2 * m:
+        # The horizon ends during alternating exploration: no exploitation occurs.
+        # Avoid preloading rewards/counts for pulls beyond the requested horizon.
+        out = np.empty((len(marks), n))
+        for i, t in enumerate(marks):
+            out[i] = ((t + 1) // 2) * gap[:, 0] + (t // 2) * gap[:, 1]
+        pulls_suboptimal = ((horizon + 1) // 2) * (gap[:, 0] > 0) + (horizon // 2) * (gap[:, 1] > 0)
+        return out, pulls_suboptimal / horizon, np.zeros(n, dtype=bool)
     counts = np.full((n, 2), float(m))
     sums = rng.binomial(m, means).astype(float)       # exploration outcome, (n, 2)
     explore_regret = m * gap.sum(axis=1)

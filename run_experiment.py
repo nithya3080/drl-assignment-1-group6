@@ -7,15 +7,17 @@ Algorithms", arXiv:2510.27001.
   Scenario B  p = (0.895, 0.90)   micro-gap, Delta = 0.005, lower variance
   Scenario C  p = (0.89, 0.895)   micro-gap, Delta = 0.005, higher variance
 
-Protocol (paper, Section 3.2): horizon T = 1,000,000 steps, 100 independent
-trials, ETC exploration lengths m in {10, 100, 1000, 10^4, 10^5}.
+Partial reproduction: paper-matched horizon T = 1,000,000 steps and 100
+independent trials for ETC, UCB and UCB-Tuned; this is a subset of the paper's
+eight algorithms. Arm orders are randomized per trial rather than exhaustively
+permuted. ETC exploration lengths m in {10, 100, 1000, 10^4, 10^5}.
 
 Usage
-  python3 run_experiment.py              # full protocol, about 10 minutes on 2 cores
-  python3 run_experiment.py --quick      # T = 100,000, 20 trials, about 1 minute
+  python3 run_experiment.py              # paper-matched horizon/trials; partial algorithm reproduction
+  python3 run_experiment.py --quick      # smoke check: T = 100,000, 20 trials, output results_quick/
   python3 run_experiment.py --workers 4  # number of processes (default: all cores)
 
-Output (folder results/)
+Output (folder results/, or results_quick/ with --quick)
   summary.csv       mean / std / median regret per scenario and algorithm
   etc_expected.csv  expected ETC regret from many simulated trials
   comparison.csv    our final regret next to the values printed in the paper
@@ -23,8 +25,11 @@ Output (folder results/)
 """
 import argparse
 import csv
+from datetime import datetime, timezone
+import hashlib
 import json
 import os
+import platform
 import time
 from concurrent.futures import ProcessPoolExecutor
 
@@ -35,6 +40,8 @@ import bandit_sim as sim
 SCENARIOS = {"A": (0.80, 0.90), "B": (0.895, 0.90), "C": (0.89, 0.895)}
 ETC_M = (10, 100, 1_000, 10_000, 100_000)
 SEED = 42
+IMPLEMENTATION_VERSION = "group6-1.1"
+ALGORITHM_CODES = {"etc": 0, "etc_exp": 1, "greedy": 2, "greedy_exp": 3, "ucb": 4, "ucb_tuned": 5}
 # Exploration lengths for which the expected ETC-greedy regret is estimated from more trials
 GREEDY_EXPECTATION = {("A", 100), ("B", 10_000), ("C", 10_000)}
 
@@ -72,7 +79,7 @@ def run_task(task):
     kind, scen, m, horizon, trials, expectation_trials = task
     p = SCENARIOS[scen]
     s_idx = list(SCENARIOS).index(scen)
-    code = {"etc": 0, "etc_exp": 1, "greedy": 2, "greedy_exp": 3, "ucb": 4, "ucb_tuned": 5}[kind]
+    code = ALGORITHM_CODES[kind]
     rng = np.random.default_rng([SEED, s_idx, code, m])
     marks = sim.checkpoints(horizon)
     result = {"kind": kind, "scenario": scen, "m": m}
@@ -123,8 +130,10 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--quick", action="store_true", help="T = 100,000 and 20 trials")
     parser.add_argument("--workers", type=int, default=os.cpu_count())
-    parser.add_argument("--out", default="results")
+    parser.add_argument("--out", default=None, help="output folder (default: results, or results_quick with --quick)")
     args = parser.parse_args()
+    if args.out is None:
+        args.out = "results_quick" if args.quick else "results"
     horizon, trials = (100_000, 20) if args.quick else (1_000_000, 100)
     strict_exp, greedy_exp = (5_000, 100) if args.quick else (100_000, 1_000)
     os.makedirs(args.out, exist_ok=True)
@@ -184,9 +193,30 @@ def main():
               ["scenario", "paper_algorithm", "our_algorithm", "paper_regret", "our_regret", "our_sem",
                "our_over_paper", "paper_subopt_ratio", "our_subopt_ratio", "horizon", "trials"], rows)
 
+    source_dir = os.path.dirname(os.path.abspath(__file__))
+    source_hashes = {}
+    for filename in ("bandit_sim.py", "run_experiment.py"):
+        with open(os.path.join(source_dir, filename), "rb") as source:
+            source_hashes[filename] = hashlib.sha256(source.read()).hexdigest()
+    metadata = {
+        "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+        "python_version": platform.python_version(),
+        "numpy_version": np.__version__,
+        "base_seed": SEED,
+        "rng_bit_generator": np.random.default_rng().bit_generator.__class__.__name__,
+        "task_seed_schema": "[base_seed, scenario_index_in_ABC, algorithm_code, exploration_m]",
+        "algorithm_codes": ALGORITHM_CODES,
+        "algorithm_implementation_version": IMPLEMENTATION_VERSION,
+        "source_sha256": source_hashes,
+        "reproduction_scope": "ETC, ETC-greedy, UCB, UCB-Tuned; partial algorithm/metric reproduction",
+        "arm_order_protocol": "independent random swap per trial; not exhaustive permutations",
+        "paper_comparison_horizon_matches": horizon == 1_000_000,
+        "stored_data_scope": "aggregate mean curves; per-trial trajectories are not retained",
+    }
     with open(os.path.join(args.out, "raw_results.json"), "w") as f:
         json.dump({"horizon": horizon, "trials": trials, "scenarios": SCENARIOS,
-                   "checkpoints": sim.checkpoints(horizon).tolist(), "mean_regret_curves": curves}, f)
+                   "checkpoints": sim.checkpoints(horizon).tolist(), "mean_regret_curves": curves,
+                   "metadata": metadata}, f)
 
     print(f"\nSaved summary.csv, etc_expected.csv, comparison.csv, raw_results.json to {args.out}/"
           f"  ({time.time() - started:.0f}s)")
