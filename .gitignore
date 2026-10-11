@@ -12,3 +12,6 @@ results_quick/
 /presentation/
 /tools/prepare_submission.py
 /requirements-recording.txt
+.ipynb_checkpoints/
+# Keep notebook script exports local; the notebook is the execution source.
+/*.py

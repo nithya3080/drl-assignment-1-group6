@@ -16,7 +16,7 @@ BITS Pilani WILP, M.Tech AI/ML, Deep Reinforcement Learning, Assignment I, Group
 
 ## What this repository contains
 
-This repository contains the experiment code, dependencies, saved result tables and generated plots. Use the setup commands below to run and verify the experiments.
+The complete execution workflow is in [DRL_Assignment1_Group6.ipynb](DRL_Assignment1_Group6.ipynb): simulation, 26 verification checks, experiments, result tables and plots. The notebook is self-contained and needs no separate Python scripts.
 
 The paper compares eight bandit algorithms on three two-armed Bernoulli scenarios. This
 repository partially reproduces ETC, UCB and UCB-Tuned using the paper's scenarios, horizon T = 1,000,000
@@ -32,26 +32,31 @@ reproduced. The paper contributes an evaluation framework for existing algorithm
 
 | File | Purpose |
 |---|---|
-| `bandit_sim.py` | Simulation of ETC, ETC-greedy, UCB and UCB-Tuned (all trials run together as NumPy arrays) |
-| `run_experiment.py` | Runs scenarios A, B, C and writes the tables in `results/` |
-| `make_plots.py` | Draws `results/regret_curves.png` and `results/final_regret_vs_paper.png` |
-| `verify_implementation.py` | Checks the simulation against a normal approximation and independent plain-loop references |
-| `results/` | `summary.csv`, `comparison.csv`, `etc_expected.csv`, `raw_results.json`, figures |
+| `DRL_Assignment1_Group6.ipynb` | Simulation core, integrated verification, full/quick experiment runner, tables and plots; saved full-run outputs included |
+| `requirements.txt` | Validated numerical, parallel execution and Jupyter dependencies |
+| `results/` | Canonical full-run CSV tables, aggregate JSON curves and PNG figures |
 
 ## Setup and run
 
 ```bash
-pip install -r requirements.txt        # numpy, matplotlib
-python3 verify_implementation.py       # about a minute, prints PASS/FAIL per check
-python3 run_experiment.py              # full horizon for our selected methods; writes results/
-python3 run_experiment.py --quick      # T = 100,000, 20 trials; writes results_quick/
-python3 make_plots.py                  # figures from results/
+python -m pip install -r requirements.txt
+python -m jupyterlab
 ```
 
-On Windows, use `python` if `python3` is not available. Quick runs use a shorter horizon;
-their paper-reference columns are not like-for-like final comparisons. Use the preserved
-full-horizon `results/` for reported comparisons. To plot quick outputs, pass their directory
-explicitly: `python3 make_plots.py results_quick`.
+Open `DRL_Assignment1_Group6.ipynb` from this repository directory and choose
+**Restart Kernel and Run All**. Keep `RUN_MODE = "full"` in section 1 to regenerate
+`results/` with T = 1,000,000 and 100 trials. The notebook runs its 26 checks before
+starting the experiment and stops on a failed check. Section 5 executes the full
+experiment; sections 6 and 8 display its tables and figures. All code lives in the
+notebook, including the checks, so there is no separate verification file.
+
+For a shorter smoke run, change `RUN_MODE` to `"quick"` and run all cells again.
+Quick mode uses T = 100,000 and 20 trials and writes `results_quick/`. Its
+paper-reference columns are not like-for-like full-horizon comparisons; use the
+saved full-mode `results/` for the reported assignment numbers. `WORKERS` controls
+the notebook's process count (default: at most eight); task-specific seeds make
+results independent of scheduling. Restore `RUN_MODE = "full"` before saving a
+notebook intended to show the assignment results.
 
 Random seeds are fixed (`SEED = 42`); repeatability also depends on code and library versions.
 The committed results come from a full run on 11 October 2026 with Python 3.14.5 and
@@ -62,7 +67,9 @@ Five auxiliary strict-ETC Monte Carlo estimates differed slightly from the histo
 output, within the reported sampling uncertainty. The original producing environment was
 not recorded, so the cause of those differences is unestablished. The tables below use
 the fresh committed estimates. `results/raw_results.json` records the generation time,
-seeds, Python/NumPy versions, implementation version, source hashes and reproduction scope.
+seeds, Python/NumPy/joblib versions, implementation version, runtime source hashes and reproduction scope.
+The hashes cover the executed simulation, runner and verification function sources and
+constants, excluding notebook outputs; they also reflect executed edits not yet saved.
 
 ## Setting
 
@@ -140,7 +147,7 @@ of committing to the worse arm is approximately
     P(wrong) = Phi( -Delta / sqrt((s0^2 + s1^2) / m) ),   s_a^2 = p_a (1 - p_a)
 
 and the expected regret is  m * Delta + P(wrong) * Delta * (T - 2m).
-`verify_implementation.py` checks this approximation against the simulation. A mean over 100
+The notebook's Verification section checks this approximation against the simulation. A mean over 100
 trials moves in steps of Delta * (T - 2m) / 100 for every trial that commits to the worse arm,
 so the expected values from 100,000 trials are listed next to it.
 
@@ -217,24 +224,24 @@ paper-highlighted settings; this does not establish a universal winner.
 
 ## Verification
 
-`verify_implementation.py` runs 26 checks covering:
+The notebook's **Verification (26 checks)** section runs the following checks:
 
 1. ETC: the simulated share of trials that commit to the worse arm matches the normal
    approximation above for A (m = 100), B (m = 10,000), C (m = 10,000) and C (m = 100,000).
-2. UCB and UCB-Tuned: mean regret from `bandit_sim.py` agrees, within sampling error, with an
+2. UCB and UCB-Tuned: mean regret from the notebook simulation core agrees, within sampling error, with an
    independent single-trial implementation written with plain Python loops.
 3. ETC-greedy: the same comparison against a plain-loop single-trial implementation.
 4. Regret is non-decreasing in t and never exceeds Delta * t, for every algorithm.
 5. Truncated and odd exploration horizons have the correct alternating pull counts, obey
    regret = gap * horizon * suboptimal ratio, and have no commitment before exploitation.
 6. The quick-mode m = 100,000, T = 100,000 case has regret 250 and suboptimal ratio 0.5
-   for the micro-gap scenario. A failed check exits with status 1.
+   for the micro-gap scenario. A failed check raises an exception and stops the notebook.
 
 The ETC probability check uses a normal approximation with an approximation allowance;
 it is not an exact binomial calculation. The independent plain-loop comparisons use
 separate random streams and check agreement within sampling error, rather than identical
-trial paths. Run `python verify_implementation.py` to inspect all 26 checks; a failed
-check exits with status 1.
+trial paths. Run the notebook's Verification section to inspect all 26 checks; a failed
+check raises an exception and stops execution.
 
 The fresh full run uses the scenario-specific and algorithm-specific seed schema documented
 in `results/raw_results.json`. ETC expectation values are larger-trial Monte Carlo estimates
