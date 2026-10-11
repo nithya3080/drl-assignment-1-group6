@@ -14,48 +14,9 @@ BITS Pilani WILP, M.Tech AI/ML, Deep Reinforcement Learning, Assignment I, Group
 | Nallajala Saibhargav | 2025AG05608 |
 | Arjun Balaji | 2025AG05609 |
 
-## Presentation and recording script
-
-[Final 16-slide presentation](presentation/DRL_AFrameworkForFairEvaluationOfVariance-AwareBanditAlgorithms_Group6.pptx) and [matching recording script](presentation/Group6_Recording_Script.md) use the same results as this repository. All 16 speaker notes match the script.
-
-The script contains 842 spoken words and allocates 6:30 for the recording, within the assignment maximum of 7:00. Record the PPT slideshow and each member's voice, pointing to the sources, code and result evidence embedded in the slides. The actual recording is pending; add its shareable Google Drive URL to the last slide before submission.
-
-## Use the current files
-
-Use the files linked above and the committed `results/` tables together. The earlier
-presentation copies and draft scripts have been removed from the local workspace.
-The CSV files retain full stored precision; displayed numbers follow the rounding
-specified below. The 100-trial curves and larger-trial ETC estimates are separate
-datasets and are labelled accordingly.
-
-The local assignment is kept in one directory, `drl-assignment-1-group6/`:
-
-| Location | Contents |
-|---|---|
-| `presentation/` | Current PPT and matching Markdown recording script, both tracked on GitHub |
-| `results/` | Canonical execution outputs and figures, tracked on GitHub |
-| `tools/prepare_submission.py` | Adds the real Drive recording link and packages the PPT with the actual MP4 |
-| `recording/` | Local PDF and TXT reading copies of the same script |
-| `validation/` | Local execution log, 26-check log and final consistency report |
-| `submission/` | Actual submission package after the recording is supplied; currently pending |
-
-Recording aids, validation logs and actual submission files stay local. No incomplete
-PPT-only submission ZIP is provided.
-
-After recording, upload the actual MP4 to Google Drive and test its viewing access.
-From the repository directory, the optional packaging helper can be used as follows:
-
-```bash
-python -m pip install -r requirements-recording.txt
-python tools/prepare_submission.py --video "C:/path/recording.mp4" --drive-link "https://drive.google.com/file/d/YOUR_VIDEO_ID/view"
-```
-
-The helper writes the submission PPT, MP4 and ZIP to `submission/`, verifies a maximum
-video duration of 420 seconds and enforces the 10 MB file/package limit. It inserts
-the supplied Drive URL on slide 16. Inspect the completed recording and use the
-required assignment portal for the single allowed submission.
-
 ## What this repository contains
+
+This repository contains the experiment code, dependencies, saved result tables and generated plots. Use the setup commands below to run and verify the experiments.
 
 The paper compares eight bandit algorithms on three two-armed Bernoulli scenarios. This
 repository partially reproduces ETC, UCB and UCB-Tuned using the paper's scenarios, horizon T = 1,000,000
@@ -89,7 +50,7 @@ python3 make_plots.py                  # figures from results/
 
 On Windows, use `python` if `python3` is not available. Quick runs use a shorter horizon;
 their paper-reference columns are not like-for-like final comparisons. Use the preserved
-full-horizon `results/` for presentation numbers. To plot quick outputs, pass their directory
+full-horizon `results/` for reported comparisons. To plot quick outputs, pass their directory
 explicitly: `python3 make_plots.py results_quick`.
 
 Random seeds are fixed (`SEED = 42`); repeatability also depends on code and library versions.

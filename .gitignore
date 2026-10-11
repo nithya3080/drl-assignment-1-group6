@@ -4,8 +4,11 @@ __pycache__/
 .venv/
 results_quick/
 
-# Local recording aids, execution evidence and actual submission files.
+# Local presentation, recording, packaging and validation materials.
 /recording/
 /submission/
 /validation/
 /START_HERE.txt
+/presentation/
+/tools/prepare_submission.py
+/requirements-recording.txt
