@@ -14,6 +14,47 @@ BITS Pilani WILP, M.Tech AI/ML, Deep Reinforcement Learning, Assignment I, Group
 | Nallajala Saibhargav | 2025AG05608 |
 | Arjun Balaji | 2025AG05609 |
 
+## Presentation and recording script
+
+[Final 16-slide presentation](presentation/DRL_AFrameworkForFairEvaluationOfVariance-AwareBanditAlgorithms_Group6.pptx) and [matching recording script](presentation/Group6_Recording_Script.md) use the same results as this repository. All 16 speaker notes match the script.
+
+The script contains 842 spoken words and allocates 6:30 for the recording, within the assignment maximum of 7:00. Record the PPT slideshow and each member's voice, pointing to the sources, code and result evidence embedded in the slides. The actual recording is pending; add its shareable Google Drive URL to the last slide before submission.
+
+## Use the current files
+
+Use the files linked above and the committed `results/` tables together. The earlier
+presentation copies and draft scripts have been removed from the local workspace.
+The CSV files retain full stored precision; displayed numbers follow the rounding
+specified below. The 100-trial curves and larger-trial ETC estimates are separate
+datasets and are labelled accordingly.
+
+The local assignment is kept in one directory, `drl-assignment-1-group6/`:
+
+| Location | Contents |
+|---|---|
+| `presentation/` | Current PPT and matching Markdown recording script, both tracked on GitHub |
+| `results/` | Canonical execution outputs and figures, tracked on GitHub |
+| `tools/prepare_submission.py` | Adds the real Drive recording link and packages the PPT with the actual MP4 |
+| `recording/` | Local PDF and TXT reading copies of the same script |
+| `validation/` | Local execution log, 26-check log and final consistency report |
+| `submission/` | Actual submission package after the recording is supplied; currently pending |
+
+Recording aids, validation logs and actual submission files stay local. No incomplete
+PPT-only submission ZIP is provided.
+
+After recording, upload the actual MP4 to Google Drive and test its viewing access.
+From the repository directory, the optional packaging helper can be used as follows:
+
+```bash
+python -m pip install -r requirements-recording.txt
+python tools/prepare_submission.py --video "C:/path/recording.mp4" --drive-link "https://drive.google.com/file/d/YOUR_VIDEO_ID/view"
+```
+
+The helper writes the submission PPT, MP4 and ZIP to `submission/`, verifies a maximum
+video duration of 420 seconds and enforces the 10 MB file/package limit. It inserts
+the supplied Drive URL on slide 16. Inspect the completed recording and use the
+required assignment portal for the single allowed submission.
+
 ## What this repository contains
 
 The paper compares eight bandit algorithms on three two-armed Bernoulli scenarios. This
@@ -64,7 +105,7 @@ seeds, Python/NumPy versions, implementation version, source hashes and reproduc
 
 ## Setting
 
-| Scenario | Arm means (p1, p2) | Gap | Variance of the arms |
+| Scenario | Arm means (p1, p2) | Gap | Variance of the arms (rounded to 3 decimals) |
 |---|---|---|---|
 | A | 0.80, 0.90 | 0.100 | 0.160, 0.090 |
 | B | 0.895, 0.90 | 0.005 | 0.094, 0.090 |
@@ -79,10 +120,14 @@ Rewards are Bernoulli. Regret is the cumulative pseudo-regret R_t = sum over k o
 | UCB | Pull the arm with the largest  Q_a + sqrt(2 ln t / T_a) |
 | UCB-Tuned | Pull the arm with the largest  Q_a + sqrt((ln t / T_a) * min(1/4, V_a)),  V_a = mean(X^2) - Q_a^2 + sqrt(2 ln t / T_a) |
 
-The better arm is placed at index 0 or 1 at random in every trial, so ties between indices
-favour neither arm.
+The better arm is placed at index 0 or 1 at random in every trial. This removes index
+favouritism in expectation; finite trial counts need not balance both orders exactly.
 
 ## Results (T = 1,000,000, 100 trials)
+
+The CSV files are the canonical numerical record. Tables and plots display rounded values;
+use the stored CSV precision when comparing results or recomputing ratios. Error bars and
+values following `±` show one standard error of the mean, rather than confidence intervals.
 
 ### UCB and UCB-Tuned, next to the paper
 
@@ -99,6 +144,19 @@ All six values are within 6% of the paper. UCB-Tuned has the lowest regret of th
 scenario. The absolute regret savings against UCB are largest in the two micro-gap
 scenarios B and C; the largest relative reduction occurs in A.
 
+Calculated from the **paper's** UCB and UCB-Tuned means in Tables 3–5:
+
+| Scenario | UCB minus UCB-Tuned regret | UCB / UCB-Tuned |
+|---|---|---|
+| A | 207.50 | 7.77 |
+| B | 914.96 | 5.31 |
+| C | 946.48 | 5.19 |
+
+These are paper-derived comparisons, distinct from the local means above. The evidence
+supports UCB-Tuned over UCB in these tested settings. ETC's ranking also depends on its
+exploration budget and whether its empirical means keep updating; no universal winner is
+established by these experiments.
+
 ![final regret vs paper](results/final_regret_vs_paper.png)
 
 ### Regret over time
@@ -107,6 +165,9 @@ scenarios B and C; the largest relative reduction occurs in A.
 
 The curves show ETC and ETC-greedy at the setting the paper reports for that scenario
 (m = 100 in A, m = 10,000 in B and C), together with UCB and UCB-Tuned.
+Every plotted curve averages 100 trials. The auxiliary estimates below use 100,000 trials
+for strict ETC and 1,000 trials for selected ETC-greedy settings; they are separate datasets
+and need not equal the endpoints of the 100-trial curves.
 
 ### ETC and ETC-greedy
 
@@ -146,6 +207,11 @@ estimate. Trials in which this never happens stay on the worse arm for the rest 
 they are rare, but each one adds a large regret, which is why the standard errors below are
 wide. The mean regret over 100 trials, and the expected
 regret from 1,000 trials, at the three settings the paper highlights:
+
+The paper's Section 2.2 describes a fixed commitment. Its [pinned ETC implementation,
+lines 45–57](https://github.com/eelisee/bandit_playground/blob/ab0e657070c41089ed37d9795f297d067bd84903/src/algorithms/ETC.py#L45-L57)
+instead selects the largest running empirical mean each round and updates that arm's
+counts and rewards. This distinction is why both variants are evaluated here.
 
 | Scenario | m | Mean regret, 100 trials (± s.e.) | Expected regret, 1,000 trials (± s.e.) | Expected regret of ETC, 100,000 trials |
 |---|---|---|---|---|
@@ -213,6 +279,13 @@ The fresh full run uses the scenario-specific and algorithm-specific seed schema
 in `results/raw_results.json`. ETC expectation values are larger-trial Monte Carlo estimates
 with standard errors; they should not be interpreted as exact expectations. The reported
 paper comparisons cover only the algorithms and regret metrics reproduced here.
+
+The paper-linked [analysis notebook](https://github.com/eelisee/bandit_playground/blob/ab0e657070c41089ed37d9795f297d067bd84903/src/experiments-SKILL.ipynb)
+also warrants care: its reward-variance calculation uses 100 terminal trial totals but
+sets the chi-square degrees of freedom to 999,999. Under the usual independent normal-data
+variance-test assumptions, 100 observations require 99 degrees of freedom. This is an
+implementation concern about those reported variance p-values; it does not provide a
+test of regret differences. Our reproduction does not recompute these p-values.
 
 ## File reference
 

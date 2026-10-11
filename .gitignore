@@ -3,3 +3,9 @@ __pycache__/
 .DS_Store
 .venv/
 results_quick/
+
+# Local recording aids, execution evidence and actual submission files.
+/recording/
+/submission/
+/validation/
+/START_HERE.txt
